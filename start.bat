@@ -26,8 +26,23 @@ rem   start.bat hands    the voice and the hands board (no face)
 cd /d "%~dp0.."
 
 if exist "ai-visualizer\" if not "%1"=="hands" (
-  echo   face:  starting
-  start "agent face" cmd /c "cd ai-visualizer && run.bat"
+  netstat -ano | findstr /R /C:"127.0.0.1:8790.*LISTENING" >nul
+  if errorlevel 1 (
+    echo   face:  starting
+    start "agent face" /D "ai-visualizer" run.bat
+  ) else (
+    rem A listening port alone doesn't prove a visible window is up --
+    rem the browser can die or get closed by hand while the server lives on,
+    rem which used to leave the face silently unopened every launch after.
+    powershell -NoProfile -Command "if (Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'msedge|chrome' -and $_.CommandLine -like '*.browser-profile*' }) { exit 0 } else { exit 1 }" >nul 2>nul
+    if errorlevel 1 (
+      echo   face:  server running with no window attached, restarting
+      powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'server\.py' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+      start "agent face" /D "ai-visualizer" run.bat
+    ) else (
+      echo   face:  already running, leaving it alone
+    )
+  )
 )
 
 if exist "barehands\" if not "%1"=="voice" (
