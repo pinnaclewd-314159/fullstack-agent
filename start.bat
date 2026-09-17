@@ -37,7 +37,12 @@ if exist "ai-visualizer\" if not "%1"=="hands" (
     powershell -NoProfile -Command "if (Get-CimInstance Win32_Process | Where-Object { $_.Name -match 'msedge|chrome' -and $_.CommandLine -like '*.browser-profile*' }) { exit 0 } else { exit 1 }" >nul 2>nul
     if errorlevel 1 (
       echo   face:  server running with no window attached, restarting
-      powershell -NoProfile -Command "Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -match 'server\.py' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"
+      rem Stop ONLY the face: whatever listens on 8790, walked up through
+      rem its py/cmd launchers to its run.bat window so no orphan window is
+      rem left holding on "stopped with an error". Matching server.py by
+      rem name also killed the hands board, whose command line is identical,
+      rem and in voice mode nothing ever restarted it.
+      powershell -NoProfile -Command "$p = (Get-NetTCPConnection -LocalPort 8790 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1).OwningProcess; $ids = @(); while ($p) { $c = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $p); if (-not $c) { break }; if ($c.Name -match '^(python|pythonw|py)\.exe$') { $ids += $p } elseif ($c.Name -eq 'cmd.exe' -and $c.CommandLine -match 'server\.py|run\.bat') { $ids += $p; if ($c.CommandLine -match 'run\.bat') { break } } else { break }; $p = $c.ParentProcessId }; $ids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }"
       start "agent face" /D "ai-visualizer" run.bat
     ) else (
       echo   face:  already running, leaving it alone
