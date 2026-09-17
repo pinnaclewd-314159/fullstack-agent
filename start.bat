@@ -45,16 +45,16 @@ if exist "ai-visualizer\" if not "%1"=="hands" (
   )
 )
 
+rem Both servers are started through their own run.bat, which finds a
+rem working interpreter and holds its window if anything goes wrong. This
+rem file deliberately does NOT hunt for Python itself: a clean Windows 11
+rem answers to the name `python` with a Microsoft Store decoy that passes
+rem `where` and then exits 9009, so the check has to run an interpreter
+rem rather than locate one -- and that belongs in one place per repo, not
+rem duplicated here where a standalone user would never see the fix.
 if exist "barehands\" if not "%1"=="voice" (
   echo   hands: starting
-  rem if errorlevel reads the where result at run time. A percent-style
-  rem check here would expand when this block is parsed and test a stale value.
-  where py >nul 2>nul
-  if errorlevel 1 (
-    start "agent hands" cmd /c "cd barehands && python server.py"
-  ) else (
-    start "agent hands" cmd /c "cd barehands && py server.py"
-  )
+  start "agent hands" cmd /c "cd barehands && run.bat"
 )
 
 if exist "backtalk\" (
@@ -62,7 +62,29 @@ if exist "backtalk\" (
   cd backtalk
   rem Self-repair: reconcile the voice line's packages before launch
   rem (fast when current; heals a half-installed environment).
-  uv sync -q --inexact >nul 2>nul
+  rem
+  rem Its output is deliberately NOT hidden. This used to run quiet with
+  rem everything sent to nul, so a first run downloaded a few hundred
+  rem megabytes behind a completely blank screen. There is no way to tell
+  rem that apart from frozen, and people reasonably assumed the worst.
+  echo   voice: checking packages. The FIRST run downloads a few hundred MB
+  echo          and can take several minutes. It is not stuck.
+  uv sync --inexact
+  rem Stop HERE if the packages could not be installed. This used to fall
+  rem through to the launch and then blame backtalk's log for a failure
+  rem that happened before backtalk ever ran, sending people to a healthy
+  rem log file with nothing in it to find.
+  if errorlevel 1 (
+    echo.
+    echo   The voice line's packages could not be installed, so it never
+    echo   started. The reason is in the output above.
+    echo.
+    echo   This happened during setup, BEFORE the voice ran, so there is
+    echo   nothing about it in backtalk\logs\backtalk.log.
+    echo.
+    pause
+    exit /b 1
+  )
   uv run python -m backtalk.main
   rem A clean goodbye exits 0 and the window may close. An error exits
   rem nonzero, and the window HOLDS so the message can be read.

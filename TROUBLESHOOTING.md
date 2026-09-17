@@ -43,7 +43,7 @@ The greeting line lives in `backtalk/backtalk.json` under `"greeting"`. If it is
 
 ## start.sh says a piece is starting but nothing appears
 
-- The face opens a browser tab automatically. If no tab appears, open `http://127.0.0.1:8790/` yourself.
+- The face opens a browser tab automatically, on whichever face your `ai-visualizer.json` names. If no tab appears, open `http://127.0.0.1:8790/` yourself and click your face from the gallery. That address is the picker, not a face, so going straight there and expecting the animation is the usual confusion.
 - The hands never open a tab automatically (the camera page should be opened deliberately): `http://127.0.0.1:8794/` in Chrome.
 - Two stacks can't run at once. If a port is already busy from an earlier session, Ctrl-C the old terminal or close it, then start again.
 

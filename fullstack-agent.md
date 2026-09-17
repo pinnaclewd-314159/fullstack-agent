@@ -11,7 +11,7 @@ Ground rules, binding for the whole run:
 
 ## Phase 0: Find home, and find what already exists
 
-**Prerequisite check, before anything else: git.** On Mac and Linux the install command arrives through git, so it exists. On Windows the install command downloads this repo as a ZIP on purpose, so it works on a machine with no git at all; that means git may be missing here, and the component installs below need it. Check with `git --version`. If it's missing, ask first, never silently: "One tool before we build: git, the free program that downloads and updates all the pieces. Want me to install it for you right now?" On a clear yes: `winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements`, then verify it landed. One gotcha you (the AI) must handle yourself: a terminal that was already open does not see freshly installed programs, so for the rest of THIS setup call git by its full path (`C:\Program Files\Git\cmd\git.exe`); every terminal opened after today finds `git` normally.
+**Prerequisite check, before anything else: git.** On Mac and Linux the install command arrives through git, so it exists. On Windows the install command downloads this repo as a ZIP on purpose, so it works on a machine with no git at all; that means git may be missing here, and the component installs below need it. Check with `git --version`. If it's missing, ask first, never silently: "One tool before we build: git, the free program that downloads and updates all the pieces. Want me to install it for you right now?" On a clear yes: `winget install --id Git.Git -e --source winget --silent --accept-package-agreements --accept-source-agreements`, then verify it landed. One gotcha you (the AI) must handle yourself, and it applies to EVERY tool you install today, not just this one: a terminal that was already open does not see freshly installed programs. For the rest of THIS setup call anything you just installed by its full path -- git at `C:/Program Files/Git/cmd/git.exe`, and the same goes for `uv` when a component installs it, which bites exactly the same way and has caught a real install. Every terminal opened after today finds them normally. **Write paths with forward slashes throughout**: they work everywhere in both Python and Node on Windows, and they survive the trip through bash and JSON that eats backslashes.
 
 **Then, if this repo has no `.git` folder inside it** (it arrived as a zip): convert it into a real clone in place, so the update script can reach it forever after. Inside this folder: `git init -b main`, `git remote add origin https://github.com/jaredrhod/fullstack-agent`, `git fetch origin`, `git reset --hard origin/main`, `git branch --set-upstream-to=origin/main main`. Nothing the person sees changes; the folder just gains its connection to updates. Do this quietly and move on.
 
@@ -65,7 +65,7 @@ ai-memory-vault, backtalk, barehands, ai-visualizer.
 
 **The adoption exceptions, checked before each clone:**
 
-- A piece already downloaded from these repos somewhere on the machine, that they actively use: do not duplicate it. Wire to their copy where it stands; wiring is just paths. A stale, unmodified copy sitting outside the home folder is different: prefer a fresh copy inside the home (so the update script reaches it) and leave the old one untouched.
+- A piece already downloaded from these repos somewhere on the machine that they actively use: do not duplicate it. Wire to their copy where it stands; wiring is just paths. A stale, unmodified copy sitting outside the home folder is different: prefer a fresh copy inside the home (so the update script reaches it) and leave the old one untouched.
 - A HAND-BUILT voice line or visualizer from the prompts era: our repo installs as the new default, and you say the honest sentence: "your old build stays right where it is; it just will not be the one that runs." Their files are never touched.
 - A hand-built visualizer SCENE (they designed what appears on screen): offer the promotion. COPY, never move, their page into `ai-visualizer/faces/<their-name-for-it>/index.html` with a small `face.json`, so their creation appears in the gallery beside the shipped faces. This is the one piece of the old world that is not an inferior copy of ours; treat it with respect.
 
@@ -123,12 +123,12 @@ Then, **before you build anything else, make one offer.** Ask it once, plainly, 
 
 **Why it happens HERE and not at the end:** the launcher test below opens a NEW session in their home folder, and that new window becomes the one they keep. Anything you ask after it is addressed to a window they have already moved on from. Every decision and every install has to land before that handoff.
 
-Then **make the launchers**, so they never have to remember any of this. Four shortcuts on their Desktop, named with THEIR agent's name (skip any mode whose pieces they did not install; the Update shortcut is for everyone):
+Then **make the launchers**, so they never have to remember any of this. Shortcuts on their Desktop, named with THEIR agent's name (skip any mode whose pieces they did not install):
 
 1. **`Chat with <name>`** opens a typed Claude Code session in the home folder, terminal only. (macOS: a `.command` file containing `#!/bin/bash`, then the PATH export below, then `cd "<home folder>" && claude`. Windows: a `.bat` with `cd /d "<home folder>"` then `claude`.)
 2. **`Talk to <name>`** starts the voice and the face. (Runs `fullstack-agent/start.sh voice`, or `start.bat voice` on Windows.)
 3. **`<name> barehands`** starts the voice and the hands board, no face; the board IS the screen in this mode. (Runs `fullstack-agent/start.sh hands`, or `start.bat hands`.)
-4. **`Update <name>`** pulls the newest version of every installed piece, showing what changed before applying it. (macOS: a `.command` with the PATH export, then `cd "<home folder>/fullstack-agent" && ./update.sh`. Windows: a `.bat` with `cd /d "<home folder>\fullstack-agent"`, then `call update.bat`, then `pause` so the changelog stays readable instead of the window vanishing.)
+4. **`Update <name>`** (macOS only) pulls the newest version of every installed piece, showing what changed before applying it. (A `.command` with the PATH export, then `cd "<home folder>/fullstack-agent" && ./update.sh`.) On Windows, skip the Update shortcut; tell them to open a chat and say "update everything and tell me what changed" instead.
 
 **Every macOS `.command` MUST carry this line right after the shebang, before anything else runs:**
 
@@ -136,7 +136,7 @@ Then **make the launchers**, so they never have to remember any of this. Four sh
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 ```
 
-A double-clicked shortcut launches with a bare system PATH where neither `claude` nor `uv` exist, so a launcher without the export fails silently. (Windows `.bat` files inherit the user's PATH and do not need it.)
+A double-clicked shortcut launches with a bare system PATH where neither `claude` nor `uv` exists, so a launcher without the export fails silently. (Windows `.bat` files inherit the user's PATH and do not need it.)
 
 On macOS make each `.command` executable, and warn them once: the first double-click may ask permission; that is macOS being protective, click Open.
 
@@ -145,7 +145,7 @@ Then say the closing pieces, warmly and briefly, WHILE THEY ARE STILL IN THIS SE
 - **The daily habit:** the Desktop shortcuts ARE the agent. Chat when they want to type, Talk when they want the voice and the face, barehands when they want the voice and the board.
 - **Closing a window never loses anything:** `claude --continue` in the home folder reopens the most recent session mid-thought. And say the folder rule once, plainly: the agent only wakes up as itself when Claude Code opens in its home folder, which is exactly what the shortcuts do. Opened anywhere else, Claude is a stranger.
 - **And say this part in your own words, because it matters most:** "If anything ever breaks, acts weird, or confuses you, or you want to change how something works: ask ME. Open the chat and tell me what is wrong, and I will fix it for you. You never need to search the internet or read a manual. Fixing this is part of my job." Most people do not know their agent can do this. Make sure this person leaves knowing.
-- **Updating, and tell them this plainly:** if they ever want the newest version of everything, double-click `Update <name>`. It shows them what changed, then applies it, and it never touches their files. (The icon just runs `fullstack-agent/update.sh`; the terminal path works too if they ever prefer it.)
+- **Updating, and tell them this plainly:** on macOS, double-click `Update <name>` for the newest version of everything; it shows what changed, then applies it, and it never touches their files. On Windows, say "update everything and tell me what changed" in any chat session — the agent does the same job.
 - **Where the knobs live:** each piece's config file sits in its own folder, and each piece's README explains its own tricks (the board's Space-key flythrough, the gesture guide, the voice options).
 - **How to understand what they just installed:** point them at the **How To Build A Jarvis** playlist, https://youtube.com/playlist?list=PLPv0hMv8Uwt4 . Frame it honestly: they do not need it, because the install is done, but it walks through the whole system by hand, so it is the fastest way to understand what is under them and how to customize it. The rest of the free series is at https://youtube.com/@jaredrhod
 - **The room:** there is a free Discord with thousands of people running this exact stack, and it is the fastest place to get unstuck. https://discord.gg/YSdsqMv3V8 . Tell them to say hello when they get there.
