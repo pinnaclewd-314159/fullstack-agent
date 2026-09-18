@@ -29,7 +29,7 @@ if exist "ai-visualizer\" if not "%1"=="hands" (
   netstat -ano | findstr /R /C:"127.0.0.1:8790.*LISTENING" >nul
   if errorlevel 1 (
     echo   face:  starting
-    start "agent face" /D "ai-visualizer" run.bat
+    start /min "agent face" /D "ai-visualizer" run.bat
   ) else (
     rem A listening port alone doesn't prove a visible window is up --
     rem the browser can die or get closed by hand while the server lives on,
@@ -43,7 +43,7 @@ if exist "ai-visualizer\" if not "%1"=="hands" (
       rem name also killed the hands board, whose command line is identical,
       rem and in voice mode nothing ever restarted it.
       powershell -NoProfile -Command "$p = (Get-NetTCPConnection -LocalPort 8790 -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1).OwningProcess; $ids = @(); while ($p) { $c = Get-CimInstance Win32_Process -Filter ('ProcessId=' + $p); if (-not $c) { break }; if ($c.Name -match '^(python|pythonw|py)\.exe$') { $ids += $p } elseif ($c.Name -eq 'cmd.exe' -and $c.CommandLine -match 'server\.py|run\.bat') { $ids += $p; if ($c.CommandLine -match 'run\.bat') { break } } else { break }; $p = $c.ParentProcessId }; $ids | ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }"
-      start "agent face" /D "ai-visualizer" run.bat
+      start /min "agent face" /D "ai-visualizer" run.bat
     ) else (
       echo   face:  already running, leaving it alone
     )
@@ -90,13 +90,18 @@ if exist "backtalk\" (
     pause
     exit /b 1
   )
-  uv run python -m backtalk.main
+  rem Stderr to its own file. Python's unhandled-exception output -- most
+  rem importantly from an orphaned asyncio.create_task, which never reaches
+  rem backtalk.log -- used to die with the window and leave nothing behind.
+  (echo [%date% %time%] ---- voice line start ----)>>"logs\voice_line_stderr.log"
+  uv run python -m backtalk.main 2>>"logs\voice_line_stderr.log"
   rem A clean goodbye exits 0 and the window may close. An error exits
   rem nonzero, and the window HOLDS so the message can be read.
   if errorlevel 1 (
     echo.
     echo   The voice line stopped with an error. The message is above.
     echo   The log lives in backtalk\logs\backtalk.log
+    powershell -NoProfile -Command "Get-Content 'logs\voice_line_stderr.log' -Tail 25"
     pause
   )
 )
